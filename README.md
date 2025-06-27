@@ -6,9 +6,17 @@
 
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
-# GepExplorer Data
+# GeoExplorer Data
 
-Scrape and Embed GeoData for Berlins CSW catalogue
+This repository includes all logic around the data needed for the [GeoExplorer](https://github.com/technologiestiftung/odis-geoexplorer) - a AI-driven search application for Berlin's geo data. The [Jupiter Notebook](index.ipynb) contains scripts to:
+
+- **scrape** metadata from Berlins CSW catalogue (a geodata catalogue)
+- **embed** the data to a DB using OpenAIs and Supabase APIs.
+- **analyze** the data so it can be displayed as a 2D scatterplot in the GeoExplorer.
+
+# Setup
+
+Run the Jupiter Notebook (index.ipynb)
 
 ## Contributing
 
