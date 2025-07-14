@@ -8,15 +8,95 @@
 
 # GeoExplorer Data
 
-This repository includes all logic around the data needed for the [GeoExplorer](https://github.com/technologiestiftung/odis-geoexplorer) - a AI-driven search application for Berlin's geo data. The [Jupiter Notebook](index.ipynb) contains scripts to:
+This repository includes the data logic behind [GeoExplorer](https://github.com/technologiestiftung/odis-geoexplorer) — an AI-driven search interface for Berlin's geospatial datasets.
 
-- **scrape** metadata from Berlins CSW catalogue (a geodata catalogue)
-- **embed** the data to a DB using OpenAIs and Supabase APIs.
-- **analyze** the data so it can be displayed as a 2D scatterplot in the GeoExplorer.
+The [Jupyter Notebook](index.ipynb) contains scripts to:
 
-# Setup
+- **Scrape** metadata from Berlin’s CSW geodata catalog
+- **Embed** metadata using OpenAI’s embeddings and store it in Supabase
+- **Analyze** and visualize the data in a 2D scatterplot view for the GeoExplorer UI
 
-Run the Jupiter Notebook (index.ipynb)
+---
+
+## Setup
+
+### 1. Database Setup
+
+You can set up a Supabase database using Docker (for local development) or via [Supabase.io](https://supabase.io).
+
+Create the necessary table and function using the SQL below:
+
+```sql
+-- Create the table
+create table if not exists nods_page_section_v2 (
+  id uuid primary key,
+  slug text,
+  heading text,
+  dataset_info jsonb,
+  embedding vector(1536) -- 1536 for text-embedding-3-small
+);
+
+-- create the function
+-- create the function
+create or replace function match_page_sections_v2(
+  query_embedding vector(1536),
+  match_threshold float,
+  match_count int
+)
+returns table (
+  id uuid,
+  slug text,
+  heading text,
+  similarity float,
+  dataset_info jsonb
+)
+language plpgsql
+as $$
+begin
+  return query
+  select
+    s.id,
+    s.slug,
+    s.heading,
+    (s.embedding <#> query_embedding) * -1 as similarity,
+    s.dataset*info
+  from nods_page_section_v2 s
+  -- The dot product is negative because of a Postgres limitation, so we negate it
+  where (nods_page_section_v2.embedding <#> embedding) * -1 > match_threshold
+  order by nods_page_section_v2.embedding <#> embedding
+  limit match_count;
+end;
+$$;
+
+```
+
+### 2. Environment Setup
+
+Duplicate the `.env.example` file and rename it to `.env`. Then provide either your local connection details or those from Supabase, depending on where you want to save your data.
+
+- To retrieve your local `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` run:
+
+```bash
+npx supabase status
+```
+
+You will also need to provide a key to use **OpenAI API**.
+
+### 3. Install Dependencies
+
+Install the required Python packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run the Notebook
+
+Open and execute `index.ipynb` to run the pipeline.
+
+## ToDos
+
+- Script for removing deleted datasets
 
 ## Contributing
 
@@ -30,8 +110,11 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
 <table>
-  <tr>
-  </tr>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://hanshack.com/"><img src="https://avatars.githubusercontent.com/u/8025164?v=4?s=64" width="64px;" alt="Hans Hack"/><br /><sub><b>Hans Hack</b></sub></a><br /><a href="https://github.com/technologiestiftung/odis-geoexplorer/commits?author=hanshack" title="Code">💻</a></td>
+    </tr>
+  </tbody>
 </table>
 
 <!-- markdownlint-restore -->
@@ -45,34 +128,43 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 
 Texts and content available as [CC BY](https://creativecommons.org/licenses/by/3.0/de/).
 
-Illustrations by {MARIA_MUSTERFRAU}, all rights reserved.
-
 ## Credits
 
 <table>
   <tr>
+      <td>
+      Made by: <a href="https://odis-berlin.de">
+        <br />
+        <br />
+        <img width="200" src="https://logos.citylab-berlin.org/logo-odis-berlin.svg" />
+      </a>
+    </td>
     <td>
-      Made by <a href="https://citylab-berlin.org/de/start/">
+       Together with: <a href="https://citylab-berlin.org/de/start/">
         <br />
         <br />
-        <img width="200" src="https://logos.citylab-berlin.org/logo-citylab-color.svg" alt="Link to the CityLAB Berlin website" />
+        <img width="200" src="https://logos.citylab-berlin.org/logo-citylab-berlin.svg" />
       </a>
     </td>
     <td>
       A project by <a href="https://www.technologiestiftung-berlin.de/">
         <br />
         <br />
-        <img width="150" src="https://logos.citylab-berlin.org/logo-technologiestiftung-berlin-de.svg" alt="Link to the Technologiestiftung Berlin website" />
+        <img width="150" src="https://logos.citylab-berlin.org/logo-technologiestiftung-berlin-de.svg" />
       </a>
     </td>
     <td>
       Supported by <a href="https://www.berlin.de/rbmskzl/">
         <br />
         <br />
-        <img width="80" src="https://logos.citylab-berlin.org/logo-berlin-senatskanzelei-de.svg" alt="Link to the Senate Chancellery of Berlin"/>
+        <img width="80" src="https://logos.citylab-berlin.org/logo-berlin-senatskanzelei-de.svg" />
       </a>
     </td>
   </tr>
 </table>
 
 ## Related Projects
+
+[GeoExplorer](https://github.com/technologiestiftung/odis-geoexplorer/)
+
+[WFS-Explorer](https://github.com/technologiestiftung/odis-wfsexplorer/)
